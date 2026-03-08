@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+
+<title>Synthetic Data Engine</title>
+
+<style>
+
+body{
+font-family:Arial;
+background:#0f1115;
+color:white;
+margin:0;
+padding:20px;
+}
+
+h1{
+text-align:center;
+}
+
+.container{
+max-width:1100px;
+margin:auto;
+}
+
+input{
+width:100%;
+padding:12px;
+font-size:16px;
+border-radius:6px;
+border:none;
+margin-bottom:10px;
+}
+
+button{
+padding:10px 15px;
+border:none;
+border-radius:6px;
+margin:5px;
+background:#2a7cff;
+color:white;
+cursor:pointer;
+}
+
+button:hover{
+background:#1d5ed9;
+}
+
+.card{
+background:#1a1d24;
+padding:15px;
+margin-top:15px;
+border-radius:8px;
+}
+
+pre{
+background:#0c0e12;
+padding:10px;
+overflow:auto;
+border-radius:6px;
+font-size:12px;
+}
+
+#demoStream{
+height:220px;
+overflow:auto;
+font-size:12px;
+background:#000;
+padding:10px;
+border-radius:6px;
+}
+
+@media (max-width:700px){
+
+pre{
+font-size:11px;
+}
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Synthetic Data Engine</h1>
+
+<input id="query" placeholder="Type anything: bank transactions, pizza orders, crypto wallets, abc123">
+
+<button onclick="generate()">Generate Dataset</button>
+
+<div class="card">
+
+<h3>Live Streaming Dataset Demo</h3>
+
+<div id="demoStream"></div>
+
+</div>
+
+<div id="results"></div>
+
+</div>
+
+<script>
+
+let dataset=[]
+let stream=[]
+let requestCount=0
+let generatedRows=0
+
+function rand(max){
+return Math.floor(Math.random()*max)
+}
+
+function semanticRow(query){
+
+let words=query.toLowerCase().split(/\s+/)
+
+let row={
+id:"ID"+rand(1000000),
+dataset:query,
+value:rand(100000),
+risk_score:Math.random().toFixed(3),
+trend_score:Math.random().toFixed(3),
+fraud_probability:Math.random().toFixed(3),
+volume_estimate:rand(500000),
+timestamp:new Date().toISOString()
+}
+
+words.forEach(w=>{
+let key=w.replace(/[^a-z0-9]/g,"")
+if(!key) return
+row[key+"_metric"]=rand(10000)
+row[key+"_score"]=Math.random().toFixed(3)
+})
+
+return row
+}
+
+function startDemo(){
+
+let box=document.getElementById("demoStream")
+
+setInterval(()=>{
+
+let samples=[
+"bank transactions",
+"crypto wallets",
+"shipping containers",
+"ads impressions",
+"oil wells",
+"pizza delivery",
+"ai training data"
+]
+
+let q=samples[rand(samples.length)]
+
+let row=semanticRow(q)
+
+stream.push(row)
+
+if(stream.length>100) stream.shift()
+
+let line=document.createElement("div")
+line.textContent="STREAM "+JSON.stringify(row)
+
+box.appendChild(line)
+
+if(box.children.length>100){
+box.removeChild(box.children[0])
+}
+
+box.scrollTop=box.scrollHeight
+
+},900)
+
+}
+
+function generate(){
+
+let q=document.getElementById("query").value.trim()
+
+if(!q){
+alert("enter dataset keyword")
+return
+}
+
+let data=[]
+
+for(let i=0;i<20;i++){
+data.push(semanticRow(q))
+}
+
+dataset=data
+
+generatedRows+=20
+requestCount++
+
+let json=JSON.stringify(data,null,2)
+
+let api="https://yourdomain.com/api?q="+encodeURIComponent(q)
+
+let share=location.origin+location.pathname+"?q="+encodeURIComponent(q)
+
+document.getElementById("results").innerHTML=`
+
+<div class="card">
+
+<h3>Generated Dataset</h3>
+
+<pre>${json}</pre>
+
+<button onclick="generateLarge()">Generate 10,000 Rows</button> <button onclick="streamUserData()">Stream Dataset</button> <button onclick="downloadJSON()">Download JSON</button> <button onclick="downloadCSV()">Download CSV</button>
+
+</div>
+
+<div class="card">
+
+<h3>API Endpoint</h3>
+
+<pre id="api">${api}</pre>
+
+<button onclick="copyApi()">Copy API</button>
+
+</div>
+
+<div class="card">
+
+<h3>Share Dataset Query</h3>
+
+<pre id="share">${share}</pre>
+
+<button onclick="copyShare()">Copy Share Link</button>
+
+</div>
+
+<div class="card">
+
+<h3>Developer Usage</h3>
+
+<h4>JavaScript</h4>
+
+<pre>
+fetch("${api}")
+.then(r=>r.json())
+.then(console.log)
+</pre>
+
+<h4>Python</h4>
+
+<pre>
+import requests
+print(requests.get("${api}").json())
+</pre>
+
+<h4>Go</h4>
+
+<pre>
+resp,_:=http.Get("${api}")
+body,_:=io.ReadAll(resp.Body)
+fmt.Println(string(body))
+</pre>
+
+<h4>Java</h4>
+
+<pre>
+URL url=new URL("${api}");
+BufferedReader in=new BufferedReader(
+ new InputStreamReader(url.openStream()));
+</pre>
+
+<h4>C#</h4>
+
+<pre>
+var client=new HttpClient();
+var data=await client.GetStringAsync("${api}");
+</pre>
+
+<h4>Swift</h4>
+
+<pre>
+URLSession.shared.dataTask(with:URL(string:"${api}")!)
+{d,_,_ in print(String(data:d!,encoding:.utf8)!)}
+.resume()
+</pre>
+
+<h4>Erlang</h4>
+
+<pre>
+httpc:request(get, {"${api}", []}, [], []).
+</pre>
+
+</div>
+
+<div class="card">
+
+<h3>Platform Metrics</h3>
+
+<div id="metrics"></div>
+
+</div>
+
+`
+
+updateMetrics()
+
+}
+
+function generateLarge(){
+
+let q=document.getElementById("query").value
+
+let data=[]
+
+for(let i=0;i<10000;i++){
+data.push(semanticRow(q))
+}
+
+dataset=data
+
+generatedRows+=10000
+requestCount++
+
+alert("10,000 rows generated")
+
+updateMetrics()
+
+}
+
+function streamUserData(){
+
+let box=document.getElementById("demoStream")
+
+box.innerHTML="STREAM /datasets/custom<br><br>"
+
+let i=0
+
+let interval=setInterval(()=>{
+
+if(i>=dataset.length){
+clearInterval(interval)
+return
+}
+
+let row=dataset[i]
+
+let line=document.createElement("div")
+line.textContent="TX "+JSON.stringify(row)
+
+box.appendChild(line)
+
+box.scrollTop=box.scrollHeight
+
+i++
+
+},80)
+
+}
+
+function updateMetrics(){
+
+let box=document.getElementById("metrics")
+
+if(!box) return
+
+box.innerHTML=`
+
+Requests: ${requestCount}<br>
+Rows Generated: ${generatedRows}<br>
+Active Stream: ${stream.length}
+
+`
+
+}
+
+function downloadJSON(){
+
+let blob=new Blob([JSON.stringify(dataset,null,2)])
+
+let a=document.createElement("a")
+a.href=URL.createObjectURL(blob)
+a.download="dataset.json"
+a.click()
+
+}
+
+function downloadCSV(){
+
+let keys=Object.keys(dataset[0])
+
+let csv=keys.join(",")+"\n"
+
+dataset.forEach(r=>{
+csv+=keys.map(k=>r[k]).join(",")+"\n"
+})
+
+let blob=new Blob([csv])
+
+let a=document.createElement("a")
+a.href=URL.createObjectURL(blob)
+a.download="dataset.csv"
+a.click()
+
+}
+
+function copyApi(){
+navigator.clipboard.writeText(document.getElementById("api").innerText)
+}
+
+function copyShare(){
+navigator.clipboard.writeText(document.getElementById("share").innerText)
+}
+
+window.onload=function(){
+
+startDemo()
+
+let params=new URLSearchParams(window.location.search)
+
+if(params.get("q")){
+document.getElementById("query").value=params.get("q")
+generate()
+}
+
+}
+
+</script>
+
+</body>
+</html>
